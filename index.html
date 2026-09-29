@@ -1,0 +1,353 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mounjaro Dose Check</title>
+<meta name="description" content="A simple check-in to help you decide whether to stay on your current Mounjaro dose or talk to your prescriber about titrating up.">
+<style>
+  :root {
+    --bg: #f6f7f5;
+    --card: #ffffff;
+    --text: #1d2321;
+    --muted: #66706c;
+    --line: #e2e6e3;
+    --accent: #2f6f5e;
+    --accent-soft: #e6f0ec;
+    --up: #2f6f5e;
+    --up-soft: #e6f0ec;
+    --stay: #8a5a14;
+    --stay-soft: #f7eedc;
+    --consider: #3a5f8f;
+    --consider-soft: #e7eef7;
+    --error: #b3261e;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121614;
+      --card: #1b201e;
+      --text: #e9eeeb;
+      --muted: #9aa5a0;
+      --line: #2c3431;
+      --accent: #7cc4ad;
+      --accent-soft: #1f2e29;
+      --up: #7cc4ad;
+      --up-soft: #1f2e29;
+      --stay: #e8b765;
+      --stay-soft: #2f2716;
+      --consider: #9dbfe8;
+      --consider-soft: #1d2735;
+      --error: #f2b8b5;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  main {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 48px 16px 64px;
+  }
+  header { margin-bottom: 28px; }
+  h1 {
+    font-size: 1.75rem;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    margin: 0 0 8px;
+  }
+  .lede { color: var(--muted); margin: 0; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+  .field { margin-bottom: 22px; }
+  .field:last-of-type { margin-bottom: 26px; }
+  label, .q {
+    display: block;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+  }
+  .hint {
+    display: block;
+    font-weight: 400;
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-top: 2px;
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 420px) { .row { grid-template-columns: 1fr; } }
+
+  input[type="number"] {
+    width: 100%;
+    font: inherit;
+    font-size: 1.05rem;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input[type="number"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  .toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .toggle input { position: absolute; opacity: 0; pointer-events: none; }
+  .toggle label {
+    margin: 0;
+    text-align: center;
+    font-weight: 500;
+    padding: 11px 0;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--bg);
+    cursor: pointer;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .toggle input:checked + label {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .toggle input:focus-visible + label { box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  button {
+    width: 100%;
+    font: inherit;
+    font-weight: 600;
+    font-size: 1rem;
+    color: #fff;
+    background: var(--accent);
+    border: 0;
+    border-radius: 10px;
+    padding: 14px;
+    cursor: pointer;
+    transition: opacity .15s;
+  }
+  @media (prefers-color-scheme: dark) { button { color: #0f1412; } }
+  button:hover { opacity: .9; }
+
+  .error {
+    color: var(--error);
+    font-size: 0.9rem;
+    margin: 12px 0 0;
+    min-height: 1.2em;
+  }
+
+  #result { margin-top: 20px; display: none; }
+  #result.show { display: block; animation: rise .25s ease-out; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .verdict {
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    border: 1px solid transparent;
+  }
+  .verdict.up   { background: var(--up-soft);   border-color: var(--up);   }
+  .verdict.stay { background: var(--stay-soft); border-color: var(--stay); }
+  .verdict .label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    margin: 0 0 4px;
+  }
+  .verdict h2 { margin: 0 0 10px; font-size: 1.5rem; letter-spacing: -0.01em; }
+  .verdict.consider { background: var(--consider-soft); border-color: var(--consider); }
+  .verdict.consider h2 { color: var(--consider); }
+  .verdict.up h2   { color: var(--up); }
+  .verdict.stay h2 { color: var(--stay); }
+  .verdict p { margin: 0; }
+  .note {
+    margin-top: 12px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--stay);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 0.95rem;
+  }
+  .note p { margin: 0; }
+  .note .note-title { font-weight: 600; margin-bottom: 4px; }
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .stat .k { font-size: 0.8rem; color: var(--muted); }
+  .stat .v { font-size: 1.2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .disclaimer {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin-top: 28px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Mounjaro dose check</h1>
+    <p class="lede">A quick 4-week check-in to see whether you should stay on your current dose or titrate up.</p>
+  </header>
+
+  <form class="card" id="calc" novalidate>
+    <div class="row field">
+      <div>
+        <label for="before">Weight 4 weeks ago</label>
+        <input id="before" type="number" inputmode="decimal" step="0.1" min="0" placeholder="e.g. 65.9">
+      </div>
+      <div>
+        <label for="now">Current weight</label>
+        <input id="now" type="number" inputmode="decimal" step="0.1" min="0" placeholder="e.g. 64.5">
+      </div>
+    </div>
+    <p class="hint" style="margin:-12px 0 22px">Use kg or lb, just the same unit for both.</p>
+
+    <div class="field">
+      <span class="q">Are you still experiencing food noise?
+        <span class="hint">Constant thoughts about food, or hunger that's hard to ignore.</span>
+      </span>
+      <div class="toggle" role="radiogroup" aria-label="Food noise">
+        <input type="radio" name="noise" id="noise-yes" value="yes"><label for="noise-yes">Yes</label>
+        <input type="radio" name="noise" id="noise-no" value="no"><label for="noise-no">No</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="q">Are you having unpleasant side effects?
+        <span class="hint">e.g. nausea, vomiting, constipation, fatigue.</span>
+      </span>
+      <div class="toggle" role="radiogroup" aria-label="Side effects">
+        <input type="radio" name="side" id="side-yes" value="yes"><label for="side-yes">Yes</label>
+        <input type="radio" name="side" id="side-no" value="no"><label for="side-no">No</label>
+      </div>
+    </div>
+
+    <button type="submit">Check my dose</button>
+    <p class="error" id="error" role="alert"></p>
+  </form>
+
+  <section id="result" aria-live="polite">
+    <div class="verdict" id="verdict">
+      <p class="label">Recommendation</p>
+      <h2 id="verdict-title"></h2>
+      <p id="verdict-reason"></p>
+    </div>
+    <div class="note" id="side-note" hidden>
+      <p class="note-title">About side effects</p>
+      <p>You may experience unpleasant side effects any time you increase your dose, and you may find they ease within about 4 weeks. If your side effects are severe enough to affect your daily life, or they continue for longer than 4 weeks, talk to your doctor.</p>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="k">Total change (4 weeks)</div><div class="v" id="total"></div></div>
+      <div class="stat"><div class="k">Average per week</div><div class="v" id="weekly"></div></div>
+    </div>
+  </section>
+
+  <p class="disclaimer">
+    This tool is a general guide only and is not medical advice. Always speak with your doctor or
+    prescriber before changing your dose, and seek medical help if side effects are severe.
+  </p>
+</main>
+
+<script>
+  // ---- Logic (mirrors the spreadsheet) ----------------------------------
+  // Weekly loss rate = ((weight 4 weeks ago - current weight) / weight 4 weeks ago) / 4
+  //  1. Side effects = YES            -> STAY ON CURRENT DOSE
+  //  2. Weekly loss < 0.5%            -> TITRATE UP
+  //  3. Weekly loss > 1% + food noise -> CONSIDER TITRATING UP
+  //  4. Weekly loss >= 0.5%           -> TITRATE UP if food noise, otherwise STAY
+  const SLOW_THRESHOLD = 0.005; // 0.5% per week
+  const FAST_THRESHOLD = 0.01;  // 1% per week
+
+  const VERDICTS = {
+    up:       { cls: "up",       title: "Titrate up" },
+    stay:     { cls: "stay",     title: "Stay on your current dose" },
+    consider: { cls: "consider", title: "Consider titrating up" }
+  };
+
+  function recommend(before, now, foodNoise, sideEffects) {
+    const weekly = ((before - now) / before) / 4;
+    let verdict, reason;
+    if (sideEffects) {
+      verdict = "stay";
+      reason = "You're having unpleasant side effects, so it's best to stay where you are and give your body time to adjust.";
+    } else if (weekly < SLOW_THRESHOLD) {
+      verdict = "up";
+      reason = "Your weight loss has averaged under 0.5% per week over the last 4 weeks, which suggests your current dose may not be doing enough. Check with your prescriber before moving up.";
+    } else if (weekly > FAST_THRESHOLD && foodNoise) {
+      verdict = "consider";
+      reason = "You're losing more than 1% per week, which is a great rate. If your food noise still feels uncontrollable or distressing, consider titrating up. If it's manageable, you can happily stay on your current dose. Either way, it's a good idea to talk it through with your doctor.";
+    } else if (foodNoise) {
+      verdict = "up";
+      reason = "Your weight is moving, but food noise is still hanging around, so a higher dose may help. Check with your prescriber before moving up.";
+    } else {
+      verdict = "stay";
+      reason = "You're losing at a steady rate with no food noise and no side effects. Your current dose is working.";
+    }
+    return { verdict, reason, weekly };
+  }
+
+  // ---- UI ----------------------------------------------------------------
+  const $ = id => document.getElementById(id);
+  const fmtPct = n => (n > 0 ? "−" : n < 0 ? "+" : "") + Math.abs(n * 100).toFixed(2) + "%";
+  const fmtNum = n => (n > 0 ? "−" : n < 0 ? "+" : "") + Math.abs(n).toFixed(1);
+
+  $("calc").addEventListener("submit", e => {
+    e.preventDefault();
+    const before = parseFloat($("before").value);
+    const now = parseFloat($("now").value);
+    const noise = document.querySelector('input[name="noise"]:checked');
+    const side = document.querySelector('input[name="side"]:checked');
+
+    let err = "";
+    if (!(before > 0) || !(now > 0)) err = "Please enter both weights.";
+    else if (!noise || !side) err = "Please answer both questions.";
+    $("error").textContent = err;
+    if (err) { $("result").classList.remove("show"); return; }
+
+    const r = recommend(before, now, noise.value === "yes", side.value === "yes");
+
+    const v = VERDICTS[r.verdict];
+    $("verdict").className = "verdict " + v.cls;
+    $("verdict-title").textContent = v.title;
+    $("verdict-reason").textContent = r.reason;
+    $("side-note").hidden = side.value !== "yes";
+    $("total").textContent = fmtNum(before - now);
+    $("weekly").textContent = fmtPct(r.weekly);
+
+    const res = $("result");
+    res.classList.remove("show"); void res.offsetWidth; res.classList.add("show");
+    res.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  });
+</script>
+</body>
+</html>
